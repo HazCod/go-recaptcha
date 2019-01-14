@@ -13,9 +13,9 @@ import (
 )
 
 // google recaptcha response
-type RecaptchaResponse struct {
+type recaptchaResponse struct {
 	Success     bool      `json:"success"`
-	Score       float64   `json:"score"`
+	Score       uint      `json:"score"`
 	Action      string    `json:"action"`
 	ChallengeTS time.Time `json:"challenge_ts"`
 	Hostname    string    `json:"hostname"`
@@ -31,7 +31,7 @@ type Recaptcha struct {
 }
 
 // check : initiate a recaptcha verify request
-func (r *Recaptcha) check(remoteAddr net.IP, captchaResponse string) (RecaptchaResponse, error) {
+func (r *Recaptcha) requestVerify(remoteAddr net.IP, captchaResponse string) (recaptchaResponse, error) {
 	// fire off request
 	resp, err := http.PostForm(
 		recaptchaServer,
@@ -44,7 +44,7 @@ func (r *Recaptcha) check(remoteAddr net.IP, captchaResponse string) (RecaptchaR
 
 	// request failed
 	if err != nil {
-		return RecaptchaResponse{Success: false}, err
+		return recaptchaResponse{Success: false}, err
 	}
 
 	// close response when function exits
@@ -53,38 +53,51 @@ func (r *Recaptcha) check(remoteAddr net.IP, captchaResponse string) (RecaptchaR
 	// read response body
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return RecaptchaResponse{Success: false}, err
+		return recaptchaResponse{Success: false}, err
 	}
 
 	// parse json to our response object
-	var response RecaptchaResponse
+	var response recaptchaResponse
 	err = json.Unmarshal(body, &response)
 	if err != nil {
-		return RecaptchaResponse{Success: false}, err
+		return recaptchaResponse{Success: false}, err
 	}
 
 	// return our object response
 	return response, nil
 }
 
-// Verify : check user IP, captcha subject (= page) and captcha response
-func (r *Recaptcha) Verify(remoteip net.IP, action string, response string, minScore uint) (success bool, err error) {
-	resp, err := r.check(remoteip, response)
+// Check : check user IP, captcha subject (= page) and captcha response but return treshold
+func (r *Recaptcha) Check(remoteip net.IP, action string, response string) (success bool, score uint, err error) {
+	resp, err := r.requestVerify(remoteip, response)
 	// fetch/parsing failed
 	if err != nil {
-		return false, err
+		return false, 0, err
 	}
 
 	// captcha subject did not match
 	if strings.ToLower(resp.Action) != strings.ToLower(action) {
-		return false, errors.New("recaptcha actions do not match")
+		return false, 0, errors.New("recaptcha actions do not match")
 	}
 
 	// recaptcha token was not valid
 	if !resp.Success {
-		return false, nil
+		return false, 0, nil
 	}
 
 	// user treshold was not enough
-	return uint(resp.Score) >= minScore, nil
+	return true, resp.Score, nil
+}
+
+// Verify : check user IP, captcha subject (= page) and captcha response
+func (r *Recaptcha) Verify(remoteip net.IP, action string, response string, minScore uint) (success bool, err error) {
+	success, score, err := r.Check(remoteip, action, response)
+
+	// return false if response failed
+	if !success || err != nil {
+		return false, err
+	}
+
+	// user score was not enough
+	return score >= minScore, nil
 }
