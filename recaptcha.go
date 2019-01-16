@@ -23,7 +23,10 @@ type recaptchaResponse struct {
 }
 
 // recaptcha api endpoint
-const recaptchaServer = "https://www.google.com/recaptcha/api/siteverify"
+const (
+	requestTimeout  = time.Second * 10
+	recaptchaServer = "https://www.google.com/recaptcha/api/siteverify"
+)
 
 // main object
 type Recaptcha struct {
@@ -32,8 +35,8 @@ type Recaptcha struct {
 
 // check : initiate a recaptcha verify request
 func (r *Recaptcha) requestVerify(remoteAddr net.IP, captchaResponse string) (recaptchaResponse, error) {
-	// fire off request
-	resp, err := http.PostForm(
+	// fire off request with a timeout of 10 seconds
+	resp, err := http.Client{Timeout: requestTimeout}.PostForm(
 		recaptchaServer,
 		url.Values{
 			"secret":   {r.PrivateKey},
