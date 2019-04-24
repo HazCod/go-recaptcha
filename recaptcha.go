@@ -36,7 +36,8 @@ type Recaptcha struct {
 // check : initiate a recaptcha verify request
 func (r *Recaptcha) requestVerify(remoteAddr net.IP, captchaResponse string) (recaptchaResponse, error) {
 	// fire off request with a timeout of 10 seconds
-	resp, err := http.Client{Timeout: requestTimeout}.PostForm(
+	httpClient := http.Client{Timeout: requestTimeout}
+	resp, err := httpClient.PostForm(
 		recaptchaServer,
 		url.Values{
 			"secret":   {r.PrivateKey},
