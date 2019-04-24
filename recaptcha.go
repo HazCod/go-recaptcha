@@ -15,7 +15,7 @@ import (
 // google recaptcha response
 type recaptchaResponse struct {
 	Success     bool      `json:"success"`
-	Score       uint      `json:"score"`
+	Score       float32   `json:"score"`
 	Action      string    `json:"action"`
 	ChallengeTS time.Time `json:"challenge_ts"`
 	Hostname    string    `json:"hostname"`
@@ -72,7 +72,7 @@ func (r *Recaptcha) requestVerify(remoteAddr net.IP, captchaResponse string) (re
 }
 
 // Check : check user IP, captcha subject (= page) and captcha response but return treshold
-func (r *Recaptcha) Check(remoteip net.IP, action string, response string) (success bool, score uint, err error) {
+func (r *Recaptcha) Check(remoteip net.IP, action string, response string) (success bool, score float32, err error) {
 	resp, err := r.requestVerify(remoteip, response)
 	// fetch/parsing failed
 	if err != nil {
@@ -94,7 +94,7 @@ func (r *Recaptcha) Check(remoteip net.IP, action string, response string) (succ
 }
 
 // Verify : check user IP, captcha subject (= page) and captcha response
-func (r *Recaptcha) Verify(remoteip net.IP, action string, response string, minScore uint) (success bool, err error) {
+func (r *Recaptcha) Verify(remoteip net.IP, action string, response string, minScore float32) (success bool, err error) {
 	success, score, err := r.Check(remoteip, action, response)
 
 	// return false if response failed
