@@ -72,36 +72,40 @@ func (r *Recaptcha) requestVerify(remoteAddr net.IP, captchaResponse string) (re
 }
 
 // Check : check user IP, captcha subject (= page) and captcha response but return treshold
-func (r *Recaptcha) Check(remoteip net.IP, action string, response string) (success bool, score float32, err error) {
+func (r *Recaptcha) Check(remoteip net.IP, action string, response string) (score float32, err error) {
 	resp, err := r.requestVerify(remoteip, response)
 	// fetch/parsing failed
 	if err != nil {
-		return false, 0, err
+		return 0, err
 	}
 
 	// captcha subject did not match
 	if strings.ToLower(resp.Action) != strings.ToLower(action) {
-		return false, 0, errors.New("recaptcha actions do not match")
+		return 0, errors.New("recaptcha actions do not match")
 	}
 
 	// recaptcha token was not valid
 	if !resp.Success {
-		return false, 0, nil
+		return  0, errors.New("token not valid")
 	}
 
 	// user treshold was not enough
-	return true, resp.Score, nil
+	return resp.Score, nil
 }
 
 // Verify : check user IP, captcha subject (= page) and captcha response
-func (r *Recaptcha) Verify(remoteip net.IP, action string, response string, minScore float32) (success bool, err error) {
-	success, score, err := r.Check(remoteip, action, response)
+func (r *Recaptcha) Verify(remoteip net.IP, action string, response string, minScore float32) error {
+	score, err := r.Check(remoteip, action, response)
 
 	// return false if response failed
-	if !success || err != nil {
-		return false, err
+	if err != nil {
+		return err
 	}
 
 	// user score was not enough
-	return score >= minScore, nil
+	if score < minScore {
+		return errors.New("score too low")
+	}
+	
+	return nil
 }
