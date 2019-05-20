@@ -1,3 +1,3 @@
-module github.com/hazcod/go-recaptcha
+module github.com/hazcod/gorecaptcha
 
 go 1.12
